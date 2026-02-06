@@ -289,6 +289,109 @@
         .hidden {
             display: none;
         }
+
+        /* Chord Diagram Styles */
+        .key-card {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .key-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .chord-detail-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .chord-detail-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .chord-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .chord-detail-header h2 {
+            color: #667eea;
+            font-size: 2.5em;
+        }
+
+        .close-btn {
+            font-size: 2em;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #000;
+        }
+
+        .chord-diagrams-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .chord-diagram-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .chord-diagram-section h3 {
+            color: #764ba2;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .chord-variations {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .chord-diagram-wrapper {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .chord-diagram-wrapper .position-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .chord-diagram svg {
+            display: block;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -407,6 +510,9 @@
     </div>
 
     <script>
+        // Guitar chord data
+        let guitarChordData = null;
+
         // Music Theory Data
         const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
         
@@ -485,6 +591,7 @@
                 const chords = getKeyChords(key);
                 const keyCard = document.createElement('div');
                 keyCard.className = 'key-card';
+                keyCard.onclick = () => showChordDiagrams(key);
                 
                 let chordsHTML = '<ul class="chord-list">';
                 chords.forEach(chord => {
@@ -495,6 +602,7 @@
                 keyCard.innerHTML = `
                     <h3>Key of ${key} Major</h3>
                     ${chordsHTML}
+                    <p style="margin-top: 15px; color: #667eea; font-size: 0.9em;">👆 Click to view chord diagrams</p>
                 `;
                 keysGrid.appendChild(keyCard);
             });
@@ -631,8 +739,319 @@
             document.getElementById('practice-active').classList.add('hidden');
         }
 
+        // Load guitar chord data
+        async function loadGuitarChords() {
+            try {
+                const response = await fetch('guitar.json');
+                guitarChordData = await response.json();
+                console.log('Guitar chord data loaded successfully');
+            } catch (error) {
+                console.error('Error loading guitar chords:', error);
+            }
+        }
+
+        // Convert note names to match guitar.json format
+        function normalizeNoteName(note) {
+            const noteMap = {
+                'C#': 'Csharp',
+                'D#': 'Eb',
+                'E#': 'F',
+                'F#': 'Fsharp',
+                'G#': 'Ab',
+                'A#': 'Bb',
+                'B#': 'C'
+            };
+            return noteMap[note] || note;
+        }
+
+        // Find chord data from guitar.json
+        function findChordData(chordName) {
+            if (!guitarChordData || !guitarChordData.chords) return null;
+            
+            // Try exact match first
+            if (guitarChordData.chords[chordName]) {
+                return guitarChordData.chords[chordName];
+            }
+            
+            // Try without quality (for major chords)
+            let root = chordName.replace(/major|m|dim|7/g, '').trim();
+            
+            // Normalize the note name to match guitar.json format
+            root = normalizeNoteName(root);
+            
+            if (guitarChordData.chords[root]) {
+                return guitarChordData.chords[root];
+            }
+            
+            return null;
+        }
+
+        // Map chord qualities to guitar.json suffixes
+        function getChordSuffix(quality) {
+            if (quality === '') return 'major';
+            if (quality === 'm') return 'minor';
+            if (quality === 'dim') return 'dim';
+            if (quality === '7') return '7';
+            if (quality === 'm7') return 'm7';
+            if (quality === 'dim7') return 'dim7';
+            return 'major';
+        }
+
+        // Draw chord diagram using SVG
+        function drawChordDiagram(chordData, width = 120, height = 160) {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+            const padding = 20;
+            const gridWidth = width - 2 * padding;
+            const gridHeight = height - 2 * padding;
+            const stringSpacing = gridWidth / 5;
+            const fretSpacing = gridHeight / 5;
+            const baseFret = chordData.baseFret || 1;
+
+            // Draw fret numbers
+            if (baseFret > 1) {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', 5);
+                text.setAttribute('y', padding + fretSpacing / 2);
+                text.setAttribute('font-size', '12');
+                text.setAttribute('fill', '#666');
+                text.textContent = baseFret;
+                svg.appendChild(text);
+            }
+
+            // Draw strings (vertical lines)
+            for (let i = 0; i < 6; i++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', padding + i * stringSpacing);
+                line.setAttribute('y1', padding);
+                line.setAttribute('x2', padding + i * stringSpacing);
+                line.setAttribute('y2', padding + gridHeight);
+                line.setAttribute('stroke', '#333');
+                line.setAttribute('stroke-width', i === 0 || i === 5 ? '2' : '1');
+                svg.appendChild(line);
+            }
+
+            // Draw frets (horizontal lines)
+            for (let i = 0; i <= 5; i++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', padding);
+                line.setAttribute('y1', padding + i * fretSpacing);
+                line.setAttribute('x2', padding + gridWidth);
+                line.setAttribute('y2', padding + i * fretSpacing);
+                line.setAttribute('stroke', '#333');
+                line.setAttribute('stroke-width', i === 0 && baseFret === 1 ? '4' : '2');
+                svg.appendChild(line);
+            }
+
+            // Draw barres BEFORE finger positions so they appear behind
+            if (chordData.barres && chordData.barres.length > 0) {
+                chordData.barres.forEach(barreNum => {
+                    // barreNum is the relative fret number in the diagram
+                    const y = padding + barreNum * fretSpacing - fretSpacing / 2;
+                    
+                    // Find leftmost and rightmost fretted positions at this fret
+                    let leftString = -1, rightString = -1;
+                    chordData.frets.forEach((fret, idx) => {
+                        if (fret === barreNum) {
+                            if (leftString === -1) leftString = idx;
+                            rightString = idx;
+                        }
+                    });
+                    
+                    if (leftString !== -1 && rightString !== -1 && leftString !== rightString) {
+                        const x1 = padding + leftString * stringSpacing;
+                        const x2 = padding + rightString * stringSpacing;
+                        
+                        // Draw a rounded rectangle for the barre
+                        const barreRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        barreRect.setAttribute('x', x1 - 7);
+                        barreRect.setAttribute('y', y - 7);
+                        barreRect.setAttribute('width', x2 - x1 + 14);
+                        barreRect.setAttribute('height', 14);
+                        barreRect.setAttribute('rx', 7);
+                        barreRect.setAttribute('ry', 7);
+                        barreRect.setAttribute('fill', '#667eea');
+                        svg.appendChild(barreRect);
+                    }
+                });
+            }
+
+            // Draw finger positions
+            chordData.frets.forEach((fret, stringIndex) => {
+                const x = padding + stringIndex * stringSpacing;
+                
+                if (fret === -1) {
+                    // Draw X for muted string
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x);
+                    text.setAttribute('y', 12);
+                    text.setAttribute('font-size', '16');
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('fill', '#d32f2f');
+                    text.setAttribute('text-anchor', 'middle');
+                    text.textContent = '×';
+                    svg.appendChild(text);
+                } else if (fret === 0) {
+                    // Draw O for open string
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x);
+                    circle.setAttribute('cy', 10);
+                    circle.setAttribute('r', 5);
+                    circle.setAttribute('stroke', '#333');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('fill', 'none');
+                    svg.appendChild(circle);
+                } else {
+                    // Draw filled circle for fretted note
+                    // fret is already the relative position in the diagram
+                    const y = padding + fret * fretSpacing - fretSpacing / 2;
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x);
+                    circle.setAttribute('cy', y);
+                    circle.setAttribute('r', 8);
+                    circle.setAttribute('fill', '#667eea');
+                    svg.appendChild(circle);
+
+                    // Draw finger number
+                    const fingerNum = chordData.fingers[stringIndex];
+                    if (fingerNum > 0) {
+                        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        text.setAttribute('x', x);
+                        text.setAttribute('y', y + 1);
+                        text.setAttribute('font-size', '11');
+                        text.setAttribute('font-weight', 'bold');
+                        text.setAttribute('fill', 'white');
+                        text.setAttribute('text-anchor', 'middle');
+                        text.setAttribute('dominant-baseline', 'middle');
+                        text.textContent = fingerNum;
+                        svg.appendChild(text);
+                    }
+                }
+            });
+
+            return svg;
+        }
+
+        // Check if two chord positions are identical
+        function arePositionsEqual(pos1, pos2) {
+            if (!pos1 || !pos2 || !pos1.frets || !pos2.frets) return false;
+            if (pos1.frets.length !== pos2.frets.length) return false;
+            return pos1.frets.every((fret, idx) => fret === pos2.frets[idx]);
+        }
+
+        // Get unique chord positions
+        function getUniquePositions(positions, maxCount = 4) {
+            const unique = [];
+            for (const pos of positions) {
+                if (!unique.some(existing => arePositionsEqual(existing, pos))) {
+                    unique.push(pos);
+                    if (unique.length >= maxCount) break;
+                }
+            }
+            return unique;
+        }
+
+        // Show chord diagrams for a key
+        function showChordDiagrams(key) {
+            if (!guitarChordData) {
+                alert('Chord diagrams are still loading. Please try again in a moment.');
+                return;
+            }
+
+            const chords = getKeyChords(key);
+            
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.className = 'chord-detail-view';
+            
+            const content = document.createElement('div');
+            content.className = 'chord-detail-content';
+            
+            // Header
+            const header = document.createElement('div');
+            header.className = 'chord-detail-header';
+            header.innerHTML = `
+                <h2>🎸 Chord Diagrams for ${key} Major</h2>
+                <button class="close-btn" onclick="this.closest('.chord-detail-view').remove()">✕</button>
+            `;
+            content.appendChild(header);
+            
+            // Grid of chord diagrams
+            const grid = document.createElement('div');
+            grid.className = 'chord-diagrams-grid';
+            
+            chords.forEach(chord => {
+                const section = document.createElement('div');
+                section.className = 'chord-diagram-section';
+                
+                const title = document.createElement('h3');
+                title.textContent = `${chord.romanNumeral} - ${chord.full}`;
+                section.appendChild(title);
+                
+                const variations = document.createElement('div');
+                variations.className = 'chord-variations';
+                
+                // Find chord data in guitar.json
+                const chordDataArray = findChordData(chord.root);
+                if (chordDataArray) {
+                    const suffix = getChordSuffix(chord.quality);
+                    const matchingChords = chordDataArray.filter(c => c.suffix === suffix);
+                    
+                    if (matchingChords.length > 0 && matchingChords[0].positions) {
+                        // Get unique positions (filter out duplicates)
+                        const uniquePositions = getUniquePositions(matchingChords[0].positions, 4);
+                        uniquePositions.forEach((pos, idx) => {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'chord-diagram-wrapper';
+                            
+                            const label = document.createElement('div');
+                            label.className = 'position-label';
+                            label.textContent = `Position ${idx + 1}`;
+                            wrapper.appendChild(label);
+                            
+                            const diagramContainer = document.createElement('div');
+                            diagramContainer.className = 'chord-diagram';
+                            const svg = drawChordDiagram(pos);
+                            diagramContainer.appendChild(svg);
+                            wrapper.appendChild(diagramContainer);
+                            
+                            variations.appendChild(wrapper);
+                        });
+                    } else {
+                        const noData = document.createElement('p');
+                        noData.textContent = 'No diagram available';
+                        noData.style.color = '#999';
+                        variations.appendChild(noData);
+                    }
+                } else {
+                    const noData = document.createElement('p');
+                    noData.textContent = 'No diagram data found';
+                    noData.style.color = '#999';
+                    variations.appendChild(noData);
+                }
+                
+                section.appendChild(variations);
+                grid.appendChild(section);
+            });
+            
+            content.appendChild(grid);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
         // Initialize on load
-        window.onload = function() {
+        window.onload = async function() {
+            await loadGuitarChords();
             displayHub();
         };
     </script>
