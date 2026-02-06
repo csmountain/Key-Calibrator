@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Calibrator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .content {
+            padding: 30px;
+            min-height: 500px;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Hub View Styles */
+        .keys-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .key-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .key-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .chord-list {
+            list-style: none;
+        }
+
+        .chord-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .chord-list li:last-child {
+            border-bottom: none;
+        }
+
+        .chord-number {
+            display: inline-block;
+            width: 30px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        /* Practice View Styles */
+        .practice-setup {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .setup-section {
+            margin-bottom: 25px;
+        }
+
+        .setup-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .setup-section input,
+        .setup-section select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .progression-select {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chord-toggle {
+            flex: 0 0 auto;
+        }
+
+        .chord-toggle input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+        }
+
+        .chord-toggle label {
+            display: inline;
+            font-weight: normal;
+        }
+
+        .modifications-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .modification-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .modification-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .modification-item label {
+            display: inline;
+            font-weight: normal;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .practice-active {
+            text-align: center;
+        }
+
+        .practice-question {
+            background: #f8f9fa;
+            padding: 40px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .current-key {
+            font-size: 3em;
+            color: #667eea;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .chord-progression {
+            font-size: 2em;
+            color: #764ba2;
+            margin: 20px 0;
+        }
+
+        .timer {
+            font-size: 1.5em;
+            color: #666;
+            margin: 20px 0;
+        }
+
+        .answer-section {
+            background: #e7f5e7;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .answer-section h3 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .answer-chords {
+            font-size: 2em;
+            color: #155724;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .btn-secondary {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎸 Key Calibrator</h1>
+            <p class="subtitle">Test your ability to play in any key with any progression</p>
+        </header>
+
+        <div class="nav">
+            <button id="nav-hub" class="active" onclick="showView('hub')">Hub</button>
+            <button id="nav-practice" onclick="showView('practice')">Practice Mode</button>
+        </div>
+
+        <div class="content">
+            <!-- Hub View -->
+            <div id="hub-view" class="view active">
+                <h2>All Keys and Chord Progressions</h2>
+                <div id="keys-grid" class="keys-grid"></div>
+            </div>
+
+            <!-- Practice View -->
+            <div id="practice-view" class="view">
+                <div id="practice-setup" class="practice-setup">
+                    <h2 style="text-align: center; margin-bottom: 20px;">Practice Setup</h2>
+                    
+                    <div class="setup-section">
+                        <label>Timer (seconds before reveal):</label>
+                        <input type="number" id="timer-input" value="5" min="1" max="60">
+                    </div>
+
+                    <div class="setup-section">
+                        <label>Number of chords in progression:</label>
+                        <input type="number" id="chord-count" value="3" min="1" max="7">
+                    </div>
+
+                    <div class="setup-section">
+                        <label>Select which chord degrees to include:</label>
+                        <div class="progression-select" id="progression-select">
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-1" checked>
+                                <label for="chord-1">I</label>
+                            </div>
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-2" checked>
+                                <label for="chord-2">ii</label>
+                            </div>
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-3" checked>
+                                <label for="chord-3">iii</label>
+                            </div>
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-4" checked>
+                                <label for="chord-4">IV</label>
+                            </div>
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-5" checked>
+                                <label for="chord-5">V</label>
+                            </div>
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-6" checked>
+                                <label for="chord-6">vi</label>
+                            </div>
+                            <div class="chord-toggle">
+                                <input type="checkbox" id="chord-7" checked>
+                                <label for="chord-7">vii°</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-section">
+                        <label>Chord Modifications (optional):</label>
+                        <div class="modifications-grid">
+                            <div class="modification-item">
+                                <input type="checkbox" id="mod-v-to-V">
+                                <label for="mod-v-to-V">Allow V → v (minor)</label>
+                            </div>
+                            <div class="modification-item">
+                                <input type="checkbox" id="mod-i-to-I">
+                                <label for="mod-i-to-I">Allow I → i (minor)</label>
+                            </div>
+                            <div class="modification-item">
+                                <input type="checkbox" id="mod-iv-to-IV">
+                                <label for="mod-iv-to-IV">Allow IV → iv (minor)</label>
+                            </div>
+                            <div class="modification-item">
+                                <input type="checkbox" id="mod-add7">
+                                <label for="mod-add7">Allow 7th chords</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="startPractice()">Start Practice</button>
+                </div>
+
+                <div id="practice-active" class="practice-active hidden">
+                    <div class="practice-question">
+                        <h2>Play this progression:</h2>
+                        <div class="current-key" id="current-key"></div>
+                        <div class="chord-progression" id="chord-progression"></div>
+                        <div class="timer" id="timer"></div>
+                    </div>
+
+                    <div id="answer-section" class="answer-section hidden">
+                        <h3>✓ Correct Chords:</h3>
+                        <div class="answer-chords" id="answer-chords"></div>
+                    </div>
+
+                    <div>
+                        <button class="btn-secondary" onclick="nextQuestion()">Next Question</button>
+                        <button class="btn-secondary" onclick="endPractice()">End Practice</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Music Theory Data
+        const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+        
+        // Major scale intervals (semitones from root)
+        const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+        
+        // Chord qualities for major key (I, ii, iii, IV, V, vi, vii°)
+        const CHORD_QUALITIES = ['', 'm', 'm', '', '', 'm', 'dim'];
+        const ROMAN_NUMERALS = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+
+        // Define the notes for each key (using appropriate sharps/flats)
+        const KEY_NOTES = {
+            'C': ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+            'C#': ['C#', 'D#', 'E#', 'F#', 'G#', 'A#', 'B#'],
+            'D': ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'],
+            'Eb': ['Eb', 'F', 'G', 'Ab', 'Bb', 'C', 'D'],
+            'E': ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'],
+            'F': ['F', 'G', 'A', 'Bb', 'C', 'D', 'E'],
+            'F#': ['F#', 'G#', 'A#', 'B', 'C#', 'D#', 'E#'],
+            'G': ['G', 'A', 'B', 'C', 'D', 'E', 'F#'],
+            'Ab': ['Ab', 'Bb', 'C', 'Db', 'Eb', 'F', 'G'],
+            'A': ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#'],
+            'Bb': ['Bb', 'C', 'D', 'Eb', 'F', 'G', 'A'],
+            'B': ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#']
+        };
+
+        // Get all notes in a key
+        function getKeyNotes(rootKey) {
+            return KEY_NOTES[rootKey];
+        }
+
+        // Get chord for a degree in a key
+        function getChord(key, degree, modifications = {}) {
+            const keyNotes = getKeyNotes(key);
+            const root = keyNotes[degree];
+            let quality = CHORD_QUALITIES[degree];
+            let romanNumeral = ROMAN_NUMERALS[degree];
+
+            // Apply modifications
+            if (modifications.vToMinor && degree === 4 && quality === '') {
+                quality = 'm';
+                romanNumeral = 'v';
+            }
+            if (modifications.iToMinor && degree === 0 && quality === '') {
+                quality = 'm';
+                romanNumeral = 'i';
+            }
+            if (modifications.ivToMinor && degree === 3 && quality === '') {
+                quality = 'm';
+                romanNumeral = 'iv';
+            }
+            if (modifications.add7) {
+                quality += '7';
+            }
+
+            return {
+                root: root,
+                quality: quality,
+                full: root + quality,
+                romanNumeral: romanNumeral,
+                degree: degree + 1
+            };
+        }
+
+        // Generate all chords for a key
+        function getKeyChords(key) {
+            return ROMAN_NUMERALS.map((_, i) => getChord(key, i));
+        }
+
+        // Display hub view
+        function displayHub() {
+            const keysGrid = document.getElementById('keys-grid');
+            keysGrid.innerHTML = '';
+
+            KEYS.forEach(key => {
+                const chords = getKeyChords(key);
+                const keyCard = document.createElement('div');
+                keyCard.className = 'key-card';
+                
+                let chordsHTML = '<ul class="chord-list">';
+                chords.forEach(chord => {
+                    chordsHTML += `<li><span class="chord-number">${chord.romanNumeral}:</span> ${chord.full}</li>`;
+                });
+                chordsHTML += '</ul>';
+
+                keyCard.innerHTML = `
+                    <h3>Key of ${key} Major</h3>
+                    ${chordsHTML}
+                `;
+                keysGrid.appendChild(keyCard);
+            });
+        }
+
+        // View management
+        function showView(viewName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`${viewName}-view`).classList.add('active');
+            document.getElementById(`nav-${viewName}`).classList.add('active');
+        }
+
+        // Practice mode variables
+        let practiceTimer = null;
+        let currentQuestion = null;
+
+        function startPractice() {
+            const timerSeconds = parseInt(document.getElementById('timer-input').value);
+            const chordCount = parseInt(document.getElementById('chord-count').value);
+            
+            // Get selected chord degrees
+            const selectedDegrees = [];
+            for (let i = 1; i <= 7; i++) {
+                if (document.getElementById(`chord-${i}`).checked) {
+                    selectedDegrees.push(i - 1);
+                }
+            }
+
+            if (selectedDegrees.length < chordCount) {
+                alert('Please select at least ' + chordCount + ' chord degrees');
+                return;
+            }
+
+            // Get modifications
+            const modifications = {
+                vToMinor: document.getElementById('mod-v-to-V').checked,
+                iToMinor: document.getElementById('mod-i-to-I').checked,
+                ivToMinor: document.getElementById('mod-iv-to-IV').checked,
+                add7: document.getElementById('mod-add7').checked
+            };
+
+            // Hide setup, show active
+            document.getElementById('practice-setup').classList.add('hidden');
+            document.getElementById('practice-active').classList.remove('hidden');
+
+            // Generate question
+            generateQuestion(selectedDegrees, chordCount, timerSeconds, modifications);
+        }
+
+        function generateQuestion(selectedDegrees, chordCount, timerSeconds, modifications) {
+            // Random key
+            const randomKey = KEYS[Math.floor(Math.random() * KEYS.length)];
+            
+            // Random chord progression
+            const shuffled = [...selectedDegrees].sort(() => Math.random() - 0.5);
+            const progression = shuffled.slice(0, chordCount);
+            
+            // Generate chords
+            const chords = progression.map(degree => getChord(randomKey, degree, modifications));
+            
+            currentQuestion = {
+                key: randomKey,
+                progression: progression,
+                chords: chords,
+                timerSeconds: timerSeconds
+            };
+
+            // Display question
+            document.getElementById('current-key').textContent = `Key of ${randomKey} Major`;
+            document.getElementById('chord-progression').textContent = 
+                chords.map(c => c.romanNumeral).join(' - ');
+            document.getElementById('answer-section').classList.add('hidden');
+
+            // Start timer
+            let remaining = timerSeconds;
+            document.getElementById('timer').textContent = `Time remaining: ${remaining}s`;
+            
+            practiceTimer = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    document.getElementById('timer').textContent = `Time remaining: ${remaining}s`;
+                } else {
+                    clearInterval(practiceTimer);
+                    document.getElementById('timer').textContent = `Time's up!`;
+                    showAnswer();
+                }
+            }, 1000);
+        }
+
+        function showAnswer() {
+            const answerSection = document.getElementById('answer-section');
+            const answerChords = document.getElementById('answer-chords');
+            
+            answerChords.textContent = currentQuestion.chords.map(c => c.full).join(' → ');
+            answerSection.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            if (practiceTimer) {
+                clearInterval(practiceTimer);
+            }
+
+            const timerSeconds = parseInt(document.getElementById('timer-input').value);
+            const chordCount = parseInt(document.getElementById('chord-count').value);
+            
+            const selectedDegrees = [];
+            for (let i = 1; i <= 7; i++) {
+                if (document.getElementById(`chord-${i}`).checked) {
+                    selectedDegrees.push(i - 1);
+                }
+            }
+
+            const modifications = {
+                vToMinor: document.getElementById('mod-v-to-V').checked,
+                iToMinor: document.getElementById('mod-i-to-I').checked,
+                ivToMinor: document.getElementById('mod-iv-to-IV').checked,
+                add7: document.getElementById('mod-add7').checked
+            };
+
+            generateQuestion(selectedDegrees, chordCount, timerSeconds, modifications);
+        }
+
+        function endPractice() {
+            if (practiceTimer) {
+                clearInterval(practiceTimer);
+            }
+            document.getElementById('practice-setup').classList.remove('hidden');
+            document.getElementById('practice-active').classList.add('hidden');
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            displayHub();
+        };
+    </script>
+</body>
+</html>
